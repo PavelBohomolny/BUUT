@@ -20,8 +20,8 @@ final class LocationsViewController: UIViewController {
         return view
     }
 
-    init() {
-        self.viewModel = LocationsViewModel()
+    init(viewModel: LocationsViewModel) {
+        self.viewModel = viewModel
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -58,10 +58,10 @@ final class LocationsViewController: UIViewController {
 
         Task {
             do {
-                let rows = try await viewModel.loadLocations()
-                showLocations(rows)
+                let locations = try await viewModel.loadLocations()
+                showLocations(locations)
             } catch {
-                showError()
+                showError(error)
             }
         }
     }
@@ -75,11 +75,15 @@ final class LocationsViewController: UIViewController {
         locationsView.tableView.reloadData()
     }
 
-    private func showError() {
+    private func showError(_ error: Error) {
         locationsView.activityIndicatorView.stopAnimating()
         locationsView.tableView.isHidden = true
         locationsView.messageLabel.isHidden = false
-        locationsView.messageLabel.text = "Could not load locations."
+        locationsView.messageLabel.text = errorMessage(for: error)
+    }
+
+    private func errorMessage(for error: Error) -> String {
+        (error as? LocationsAPIClientError)?.message ?? "Could not load locations."
     }
 }
 

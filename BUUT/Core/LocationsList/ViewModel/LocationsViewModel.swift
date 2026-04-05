@@ -11,7 +11,7 @@ import Foundation
 final class LocationsViewModel {
     private let locationsFetcher: LocationsFetching
 
-    init(locationsFetcher: LocationsFetching = LocationsAPIClient()) {
+    init(locationsFetcher: LocationsFetching) {
         self.locationsFetcher = locationsFetcher
     }
 

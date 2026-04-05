@@ -22,10 +22,17 @@ struct LocationsAPIClient: LocationsFetching, Sendable {
 
     func fetchLocations() async throws -> [Location] {
         guard let url = URL(string: Constants.urlString) else {
-            throw LocationsAPIClientError.invalidResponse
+            throw LocationsAPIClientError.invalidURL
         }
 
-        let (data, response) = try await session.data(from: url)
+        let data: Data
+        let response: URLResponse
+
+        do {
+            (data, response) = try await session.data(from: url)
+        } catch let error as URLError {
+            throw LocationsAPIClientError.network(error.code)
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw LocationsAPIClientError.invalidResponse
@@ -37,9 +44,12 @@ struct LocationsAPIClient: LocationsFetching, Sendable {
             throw LocationsAPIClientError.requestFailed(statusCode: statusCode)
         }
 
-        let locationsResponse = try decoder.decode(LocationsResponse.self, from: data)
-
-        return locationsResponse.locations
+        do {
+            let locationsResponse = try decoder.decode(LocationsResponse.self, from: data)
+            return locationsResponse.locations
+        } catch is DecodingError {
+            throw LocationsAPIClientError.decodingFailed
+        }
     }
 }
 
