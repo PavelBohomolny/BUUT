@@ -18,3 +18,10 @@ struct Location: Codable {
         case longitude = "long"
     }
 }
+
+extension Location {
+    var displayName: String {
+        let locationName = name?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (locationName?.isEmpty == false ? locationName : nil) ?? "Unknown location"
+    }
+}

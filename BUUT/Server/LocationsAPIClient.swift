@@ -11,14 +11,11 @@ protocol LocationsFetching {
     func fetchLocations() async throws -> [Location]
 }
 
-struct LocationsAPIClient: LocationsFetching {
+struct LocationsAPIClient: LocationsFetching, Sendable {
     private let session: URLSession
     private let decoder: JSONDecoder
 
-    init(
-        session: URLSession = .shared,
-        decoder: JSONDecoder = JSONDecoder()
-    ) {
+    init(session: URLSession = .shared, decoder: JSONDecoder = JSONDecoder()) {
         self.session = session
         self.decoder = decoder
     }
@@ -44,11 +41,6 @@ struct LocationsAPIClient: LocationsFetching {
 
         return locationsResponse.locations
     }
-}
-
-enum LocationsAPIClientError: Error, Equatable {
-    case invalidResponse
-    case requestFailed(statusCode: Int)
 }
 
 extension LocationsAPIClient {

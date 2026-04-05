@@ -7,43 +7,41 @@
 
 import UIKit
 
+@MainActor
 final class LocationsViewController: UIViewController {
-    private let placeholderView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .secondarySystemBackground
-        view.layer.cornerRadius = 24
-        return view
-    }()
+    private let viewModel: LocationsViewModel
+    private var rows: [LocationRowViewModel] = []
 
-    private let placeholderLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "Locations screen"
-        label.font = .systemFont(ofSize: 22, weight: .semibold)
-        label.textColor = .label
-        return label
-    }()
+    private var locationsView: LocationsView {
+        guard let view = view as? LocationsView else {
+            fatalError("Expected LocationsView")
+        }
+
+        return view
+    }
+
+    init() {
+        self.viewModel = LocationsViewModel()
+        super.init(nibName: nil, bundle: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func loadView() {
+        view = LocationsView()
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
         title = "Locations"
-        view.backgroundColor = .systemBackground
         navigationItem.largeTitleDisplayMode = .always
 
-        view.addSubview(placeholderView)
-        placeholderView.addSubview(placeholderLabel)
+        locationsView.tableView.dataSource = self
 
-        NSLayoutConstraint.activate([
-            placeholderView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
-            placeholderView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            placeholderView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            placeholderView.heightAnchor.constraint(equalToConstant: 120),
-
-            placeholderLabel.centerXAnchor.constraint(equalTo: placeholderView.centerXAnchor),
-            placeholderLabel.centerYAnchor.constraint(equalTo: placeholderView.centerYAnchor)
-        ])
+        loadLocations()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -51,5 +49,53 @@ final class LocationsViewController: UIViewController {
 
         navigationController?.setNavigationBarHidden(false, animated: animated)
         navigationController?.navigationBar.prefersLargeTitles = true
+    }
+
+    private func loadLocations() {
+        locationsView.activityIndicatorView.startAnimating()
+        locationsView.messageLabel.isHidden = false
+        locationsView.tableView.isHidden = true
+
+        Task {
+            do {
+                let rows = try await viewModel.loadLocations()
+                showLocations(rows)
+            } catch {
+                showError()
+            }
+        }
+    }
+
+    private func showLocations(_ rows: [LocationRowViewModel]) {
+        self.rows = rows
+        locationsView.activityIndicatorView.stopAnimating()
+        locationsView.messageLabel.isHidden = !rows.isEmpty
+        locationsView.messageLabel.text = rows.isEmpty ? "No locations found." : nil
+        locationsView.tableView.isHidden = rows.isEmpty
+        locationsView.tableView.reloadData()
+    }
+
+    private func showError() {
+        locationsView.activityIndicatorView.stopAnimating()
+        locationsView.tableView.isHidden = true
+        locationsView.messageLabel.isHidden = false
+        locationsView.messageLabel.text = "Could not load locations."
+    }
+}
+
+extension LocationsViewController: UITableViewDataSource {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        rows.count
+    }
+
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let row = rows[indexPath.row]
+       
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: LocationTableViewCell.reuseIdentifier, for: indexPath) as? LocationTableViewCell else {
+            return UITableViewCell()
+        }
+        
+        cell.configure(with: row)
+        return cell
     }
 }
